@@ -38,6 +38,8 @@ ENV LD_LIBRARY_PATH="/home/steam/avorion-dedicated:/home/steam/avorion-dedicated
 
 WORKDIR /home/steam/avorion-dedicated
 
+RUN /home/steam/steamcmd/steamcmd.sh +login anonymous +quit
+
 RUN update_args="" \
     && if [ -n "${AVORION_BRANCH}" ]; then update_args="${update_args} -beta ${AVORION_BRANCH}"; fi \
     && /home/steam/steamcmd/steamcmd.sh \

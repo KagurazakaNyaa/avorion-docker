@@ -33,6 +33,8 @@ append_csv_flags() {
 
 update_server() {
     if [[ ! -x "${server_binary}" ]] || bool_arg "${FORCE_UPDATE}"; then
+        "${steamcmd}" +login anonymous +quit
+
         local update_args=(
             +force_install_dir "${AVORION_SERVER_DIR}"
             +login anonymous
