@@ -24,6 +24,7 @@ jobs:
           mkdir -p "${state_dir}"
           chmod 0777 "${state_dir}"
           cp .github/steam-buildid.txt "${state_dir}/steam-buildid.txt"
+          chmod 0666 "${state_dir}/steam-buildid.txt"
           docker run --rm \
             -e GITHUB_OUTPUT=/state/steam-output.env \
             -e STEAM_BUILDID_FILE=/state/steam-buildid.txt \
