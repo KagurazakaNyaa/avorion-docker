@@ -48,9 +48,9 @@ RUN update_args="" \
 
 COPY --chmod=0755 docker-entrypoint.sh /docker-entrypoint.sh
 
-RUN mkdir -p "${AVORION_DATA_PATH}/${GALAXY_NAME}"
+RUN mkdir -p "${AVORION_DATA_PATH}/${GALAXY_NAME}" /home/steam/.avorion/backup
 
-VOLUME ["/home/steam/.avorion/galaxies"]
+VOLUME ["/home/steam/.avorion/galaxies", "/home/steam/.avorion/backup"]
 
 EXPOSE 27000/tcp 27000/udp 27003/udp 27020/udp 27021/udp
 

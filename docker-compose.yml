@@ -17,3 +17,4 @@ services:
       - "27021:27021/udp"
     volumes:
       - ./data/galaxies:/home/steam/.avorion/galaxies
+      - ./data/backup:/home/steam/.avorion/backup

@@ -20,6 +20,7 @@ docker run -d --name avorion \
   -p 27020:27020/udp \
   -p 27021:27021/udp \
   -v ./data/galaxies:/home/steam/.avorion/galaxies \
+  -v ./data/backup:/home/steam/.avorion/backup \
   kagurazakanyaa/avorion:latest
 ```
 
@@ -32,7 +33,7 @@ docker compose up -d
 If you use a bind mount, make sure it is writable by UID/GID `1000:1000`:
 
 ```bash
-mkdir -p ./data/galaxies
+mkdir -p ./data/galaxies ./data/backup
 sudo chown -R 1000:1000 ./data
 ```
 
@@ -86,6 +87,7 @@ Create or edit this file at `./data/galaxies/avorion_galaxy/modconfig.lua` when 
 | Path | Description |
 | --- | --- |
 | `/home/steam/.avorion/galaxies` | Galaxy saves, server configuration, logs, and `modconfig.lua`. |
+| `/home/steam/.avorion/backup` | Avorion backup files. |
 
 ## Ports
 
