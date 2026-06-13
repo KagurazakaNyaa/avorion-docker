@@ -1,0 +1,54 @@
+name: Check Avorion Update
+
+on:
+  schedule:
+    - cron: "0 12 * * *"
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check Steam buildid
+        id: steam
+        run: |
+          state_dir="${RUNNER_TEMP}/steam-state"
+          mkdir -p "${state_dir}"
+          chmod 0777 "${state_dir}"
+          cp .github/steam-buildid.txt "${state_dir}/steam-buildid.txt"
+          docker run --rm \
+            -e GITHUB_OUTPUT=/state/steam-output.env \
+            -e STEAM_BUILDID_FILE=/state/steam-buildid.txt \
+            -e STEAMCMD=/home/steam/steamcmd/steamcmd.sh \
+            -v "${GITHUB_WORKSPACE}:/workspace:ro" \
+            -v "${state_dir}:/state" \
+            -w /workspace \
+            cm2network/steamcmd:steam \
+            ./scripts/check-steam-update.sh
+          cp "${state_dir}/steam-buildid.txt" .github/steam-buildid.txt
+          cat "${state_dir}/steam-output.env" >> "${GITHUB_OUTPUT}"
+
+      - name: Commit buildid state
+        if: steps.steam.outputs.updated == 'true'
+        uses: stefanzweifel/git-auto-commit-action@v7
+        with:
+          commit_message: "chore: update Avorion buildid to ${{ steps.steam.outputs.current_buildid }}"
+          file_pattern: .github/steam-buildid.txt
+
+      - name: Trigger image build
+        if: steps.steam.outputs.updated == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run build.yml --ref "${{ github.ref_name }}"
+
+      - name: Report no update
+        if: steps.steam.outputs.updated != 'true'
+        run: echo "Avorion buildid is unchanged at ${{ steps.steam.outputs.current_buildid }}"
