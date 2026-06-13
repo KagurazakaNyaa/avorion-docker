@@ -1,0 +1,19 @@
+services:
+  avorion:
+    image: kagurazakanyaa/avorion:latest
+    build: .
+    container_name: avorion
+    restart: unless-stopped
+    environment:
+      GALAXY_NAME: avorion_galaxy
+      SERVER_NAME: Avorion Server
+      FORCE_UPDATE: "false"
+      ADMIN_STEAM_IDS: ""
+    ports:
+      - "27000:27000/tcp"
+      - "27000:27000/udp"
+      - "27003:27003/udp"
+      - "27020:27020/udp"
+      - "27021:27021/udp"
+    volumes:
+      - ./data/galaxies:/home/steam/.avorion/galaxies
