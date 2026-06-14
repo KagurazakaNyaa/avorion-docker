@@ -74,7 +74,19 @@ update_workshop_mods() {
 
     local steam_workshop_dir="${galaxy_dir}/steamapps/workshop"
     local avorion_workshop_dir="${galaxy_dir}/workshop"
-    mkdir -p "${steam_workshop_dir}" "${avorion_workshop_dir}"
+    mkdir -p "${galaxy_dir}/steamapps" "${avorion_workshop_dir}"
+
+    if [[ -L "${steam_workshop_dir}" ]]; then
+        rm -f "${steam_workshop_dir}"
+    elif [[ -d "${steam_workshop_dir}" ]]; then
+        cp -a "${steam_workshop_dir}/." "${avorion_workshop_dir}/"
+        rm -rf "${steam_workshop_dir}"
+    elif [[ -e "${steam_workshop_dir}" ]]; then
+        echo "ERROR: ${steam_workshop_dir} exists but is not a directory or symlink" >&2
+        exit 1
+    fi
+
+    ln -s "../workshop" "${steam_workshop_dir}"
 
     local steamcmd_args=(
         +force_install_dir "${galaxy_dir}"
@@ -87,10 +99,6 @@ update_workshop_mods() {
     done
 
     "${steamcmd}" "${steamcmd_args[@]}" +quit
-
-    if [[ -d "${steam_workshop_dir}/content" ]]; then
-        cp -a "${steam_workshop_dir}/." "${avorion_workshop_dir}/"
-    fi
 }
 
 if [[ "$#" -gt 0 ]]; then

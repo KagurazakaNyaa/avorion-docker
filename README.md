@@ -60,7 +60,7 @@ sudo chown -R 1000:1000 ./data
 
 Avorion manages Workshop mods through `modconfig.lua` in the galaxy directory. This file is part of the save data under `/home/steam/.avorion/galaxies/${GALAXY_NAME}`, so it should live in the mounted volume with the rest of the galaxy configuration.
 
-When `modconfig.lua` contains Workshop IDs, the entrypoint parses `workshopid = "..."` entries and updates them with SteamCMD before Avorion starts. Avorion can still verify/load them from the galaxy `workshop` directory during startup.
+When `modconfig.lua` contains Workshop IDs, the entrypoint parses `workshopid = "..."` entries and updates them with SteamCMD before Avorion starts. SteamCMD expects to use `steamapps/workshop`, so the entrypoint creates it as a relative symlink to the galaxy `workshop` directory. This keeps Workshop files in `${GALAXY_NAME}/workshop` without duplicating them, and the relative symlink remains valid when the galaxy directory is bind-mounted outside the container.
 
 Example:
 
