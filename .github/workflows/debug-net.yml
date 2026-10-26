@@ -1,37 +1,39 @@
 name: Debug Network
 
 on:
-  workflow_dispatch:
+  workflow_dispatch
 
 jobs:
   dbg:
     runs-on: ubuntu-latest
     steps:
-      - name: SteamCMD on bridge network
-        run: |
-          docker run --rm --user 0:0 -e HOME=/home/steam cm2network/steamcmd:root sh -c '
-            /home/steam/steamcmd/steamcmd.sh +quit
-            echo "STEAMCMD_EXIT=$?"
-            echo "=== stderr.txt ==="
-            tail -60 /home/steam/Steam/logs/stderr.txt 2>&1
-            echo "=== logs dir ==="
-            ls -la /home/steam/Steam/logs/ 2>&1
-          ' || true
-
-      - name: SteamCMD on host network
-        run: |
-          docker run --rm --network host --user 0:0 -e HOME=/home/steam cm2network/steamcmd:root sh -c '
-            /home/steam/steamcmd/steamcmd.sh +quit
-            echo "STEAMCMD_EXIT=$?"
-            echo "=== stderr.txt ==="
-            tail -30 /home/steam/Steam/logs/stderr.txt 2>&1
-          ' || true
-
-      - name: Probe steam endpoints
+      - name: Probe ports
         run: |
           docker run --rm --user 0:0 cm2network/steamcmd:root sh -c '
-            for h in steamcdn-a.akamaihd.net media.steampowered.com client-update.akamai.steamstatic.com api.steampowered.com cdn.steamstatic.com; do
-              printf "%-45s " "$h"
-              timeout 10 curl -sS -o /dev/null -w "%{http_code}\n" "https://$h/" 2>&1 || echo FAIL
-            done
+            echo "--- port 443 ---"
+            timeout 10 curl -sS -o /dev/null -w "%{http_code}\n" https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz || echo P443_FAIL
+            echo "--- port 80 ---"
+            timeout 10 curl -sS -o /dev/null -w "%{http_code}\n" http://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz || echo P80_FAIL
+            echo "--- update host with path ---"
+            timeout 10 curl -sS -o /dev/null -w "%{http_code}\n" http://client-update.akamai.steamstatic.com/ || echo UPD_FAIL
+            echo "--- ipv6 ---"
+            timeout 8 curl -6 -sS -o /dev/null -w "v6=%{http_code}\n" https://steamcdn-a.akamaihd.net/ || echo NO_IPV6
+          ' || true
+
+      - name: steamcmd privileged
+        run: |
+          docker run --rm --privileged --user 0:0 -e HOME=/home/steam cm2network/steamcmd:root sh -c '/home/steam/steamcmd/steamcmd.sh +quit; echo PRIV_EXIT=$?' || true
+
+      - name: steamcmd seccomp unconfined
+        run: |
+          docker run --rm --security-opt seccomp=unconfined --security-opt apparmor=unconfined --user 0:0 -e HOME=/home/steam cm2network/steamcmd:root sh -c '/home/steam/steamcmd/steamcmd.sh +quit; echo SECCOMP_EXIT=$?' || true
+
+      - name: steamcmd fresh binary
+        run: |
+          docker run --rm --user 0:0 -e HOME=/tmp/fresh cm2network/steamcmd:root sh -c '
+            mkdir -p /tmp/fresh/steamcmd /tmp/fresh/Steam
+            curl -fsSL https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz | tar xzf - -C /tmp/fresh/steamcmd
+            ls -l /tmp/fresh/steamcmd/linux32/steamcmd
+            /tmp/fresh/steamcmd/steamcmd.sh +quit
+            echo FRESH_EXIT=$?
           ' || true
