@@ -5,7 +5,17 @@ app_id="${STEAM_APP_ID:-565060}"
 state_file="${STEAM_BUILDID_FILE:-.github/steam-buildid.txt}"
 steamcmd="${STEAMCMD:-steamcmd}"
 
-current_buildid="$(${steamcmd} +login anonymous +app_info_update 1 +app_info_print "${app_id}" +quit \
+# Capture SteamCMD output explicitly. Under `set -e` a bare command
+# substitution aborts on the first non-zero exit and prints nothing, which is
+# exactly how this step failed silently with exit code 254.
+steam_output="$(${steamcmd} +login anonymous +app_info_update 1 +app_info_print "${app_id}" +quit 2>&1)" || {
+    status=$?
+    echo "SteamCMD failed with exit code ${status}" >&2
+    printf '%s\n' "${steam_output}" | tail -n 60 >&2
+    exit "${status}"
+}
+
+current_buildid="$(printf '%s\n' "${steam_output}" \
     | awk '$1 == "\"buildid\"" { gsub(/\"/, "", $2); buildid = $2 } END { print buildid }')"
 
 if [[ -z "${current_buildid}" ]]; then

@@ -22,20 +22,31 @@ jobs:
         run: |
           state_dir="${RUNNER_TEMP}/steam-state"
           mkdir -p "${state_dir}"
-          chmod 0777 "${state_dir}"
           cp .github/steam-buildid.txt "${state_dir}/steam-buildid.txt"
-          chmod 0666 "${state_dir}/steam-buildid.txt"
+
+          # Run as root so the container can write into the bind-mounted state
+          # dir regardless of which uid owns it on the host. The :steam image
+          # runs as uid 1000, which broke once ubuntu-latest moved to 26.04
+          # (steamcmd could not write its state and died silently with 254).
+          # HOME is pinned explicitly because :root does not set it and
+          # steamcmd needs the prebuilt /home/steam/.steam tree.
           docker run --rm \
+            --user 0:0 \
+            -e HOME=/home/steam \
             -e GITHUB_OUTPUT=/state/steam-output.env \
             -e STEAM_BUILDID_FILE=/state/steam-buildid.txt \
             -e STEAMCMD=/home/steam/steamcmd/steamcmd.sh \
             -v "${GITHUB_WORKSPACE}:/workspace:ro" \
             -v "${state_dir}:/state" \
             -w /workspace \
-            cm2network/steamcmd:steam \
+            cm2network/steamcmd:root \
             ./scripts/check-steam-update.sh
-          cp "${state_dir}/steam-buildid.txt" .github/steam-buildid.txt
-          cat "${state_dir}/steam-output.env" >> "${GITHUB_OUTPUT}"
+
+          # The container wrote these as root. Read them through sudo but let
+          # the runner shell own the redirect target, so the checkout stays
+          # writable for the commit step below.
+          sudo cat "${state_dir}/steam-buildid.txt" > .github/steam-buildid.txt
+          sudo cat "${state_dir}/steam-output.env" >> "${GITHUB_OUTPUT}"
 
       - name: Commit buildid state
         if: steps.steam.outputs.updated == 'true'
