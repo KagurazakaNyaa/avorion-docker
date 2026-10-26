@@ -24,14 +24,19 @@ jobs:
           mkdir -p "${state_dir}"
           cp .github/steam-buildid.txt "${state_dir}/steam-buildid.txt"
 
-          # Run as root so the container can write into the bind-mounted state
-          # dir regardless of which uid owns it on the host. The :steam image
-          # runs as uid 1000, which broke once ubuntu-latest moved to 26.04
-          # (steamcmd could not write its state and died silently with 254).
-          # HOME is pinned explicitly because :root does not set it and
-          # steamcmd needs the prebuilt /home/steam/.steam tree.
+          # Run as root with seccomp relaxed. steamcmd probes
+          # /sys/devices/virtual/dmi/id/* at startup and dies with exit 254
+          # ("Steamcmd needs to be online to update") when Docker's default
+          # seccomp profile blocks it -- the network is fine, it is a
+          # misleading message. Verified on the ubuntu-26.04 runner:
+          #   default seccomp        -> 254
+          #   --cap-add DAC_READ_SEARCH -> 254
+          #   seccomp=unconfined     -> 0
+          # HOME is pinned because :root does not set it and steamcmd needs
+          # the prebuilt /home/steam/.steam/sdk32 tree.
           docker run --rm \
             --user 0:0 \
+            --security-opt seccomp=unconfined \
             -e HOME=/home/steam \
             -e GITHUB_OUTPUT=/state/steam-output.env \
             -e STEAM_BUILDID_FILE=/state/steam-buildid.txt \
