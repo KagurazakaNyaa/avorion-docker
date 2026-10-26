@@ -1,0 +1,37 @@
+name: Debug Network
+
+on:
+  workflow_dispatch:
+
+jobs:
+  dbg:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Host network
+        run: |
+          echo "=== host resolv.conf ==="
+          cat /etc/resolv.conf
+          echo "=== host curl steamcdn ==="
+          timeout 20 curl -sS -o /dev/null -w 'http=%{http_code} time=%{time_total}\n' https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz || echo HOST_CURL_FAIL
+          echo "=== docker version ==="
+          docker version --format 'server={{.Server.Version}}'
+          echo "=== docker info ==="
+          docker info 2>/dev/null | grep -iE 'storage driver|logging driver|cgroup|iptables|firewall|network' | head -20
+
+      - name: Container network
+        run: |
+          docker run --rm cm2network/steamcmd:root sh -c '
+            echo "=== container resolv.conf ==="
+            cat /etc/resolv.conf
+            echo "=== dns ==="
+            getent hosts steamcdn-a.akamaihd.net || echo DNS_FAIL
+            echo "=== curl ==="
+            timeout 20 curl -sS -o /dev/null -w "http=%{http_code}\n" https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz || echo CONTAINER_CURL_FAIL
+          '
+
+      - name: Container network with host netns
+        run: |
+          docker run --rm --network host cm2network/steamcmd:root sh -c '
+            echo "=== host-net curl ==="
+            timeout 20 curl -sS -o /dev/null -w "http=%{http_code}\n" https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz || echo HOSTNET_CURL_FAIL
+          '
